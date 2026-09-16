@@ -1,3 +1,4 @@
+```cpp
 #include <Wire.h>
 #include <Adafruit_ADS1X15.h>
 
@@ -13,6 +14,9 @@ int referenceCh = 1;
 int samplecount = 8;
 
 const float maxDisplacement = 600.00;
+
+// Low-pass filter
+const float alpha = 0.1;
 
 float last_distance = 0.0;
 
@@ -63,13 +67,17 @@ void loop()
     // Calculate displacement using actual reference voltage
     float distance = (sensorVoltage / referenceVoltage) * maxDisplacement;
 
-    if(last_distance == 0){
+    // Low-pass filter
+    if (last_distance == 0)
+    {
         last_distance = distance;
     }
-    distance = distance * 10;
-    distance = distance + last_distance;
-    distance = distance / 11;
-    last_distance = distance;
+    else
+    {
+        last_distance = last_distance + alpha * (distance - last_distance);
+    }
+
+    distance = last_distance;
 
     Serial.print("Sensor ADC = ");
     Serial.print(sensorADC, 2);
@@ -88,8 +96,8 @@ void loop()
     Serial.print(" : Displacement = ");
     Serial.print(distance, 2);
     Serial.println(" mm");
-     Serial.print(">var1:");
+
+    Serial.print(">var1:");
     Serial.println(distance, 1);
-
-
 }
+```
