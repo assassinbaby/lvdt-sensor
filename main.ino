@@ -7,12 +7,14 @@ Adafruit_ADS1115 ads;
 #define SDA_PIN 42
 #define SCL_PIN 2
 
-int ch = 0;
+int sensorCh = 0;
+int referenceCh = 1;
+
 int samplecount = 8;
 
-const float sensorMinVoltage = 0.00f;
-const float sensorMaxVoltage = 5.11f;
-const float maxDisplacement = 600.00f;
+const float maxDisplacement = 600.00;
+
+float last_distance = 0.0;
 
 void setup()
 {
@@ -29,6 +31,7 @@ void setup()
     }
 
     // ADS1115 PGA = +/-6.144 V
+    // Suitable for sensor/reference voltage around 5 V
     ads.setGain(GAIN_TWOTHIRDS);
 
     // 860 samples per second
@@ -39,41 +42,54 @@ void setup()
 
 void loop()
 {
-    long adcSum = 0;
+    long sensorSum = 0;
+    long referenceSum = 0;
 
-    // Take samples
+    // Take samples from both channels
     for (int i = 0; i < samplecount; i++)
     {
-        adcSum += ads.readADC_SingleEnded(ch);
+        sensorSum += ads.readADC_SingleEnded(sensorCh);
+        referenceSum += ads.readADC_SingleEnded(referenceCh);
     }
 
-    // Average ADC value
-    float adcAverage = (float)adcSum / samplecount;
+    // Average ADC values
+    float sensorADC = (float)sensorSum / samplecount;
+    float referenceADC = (float)referenceSum / samplecount;
 
-    // Convert ADC value to voltage using ADS1115 configuration
-    float voltage = ads.computeVolts((int16_t)adcAverage);
+    // Convert ADC values to voltage
+    float sensorVoltage = ads.computeVolts((int16_t)sensorADC);
+    float referenceVoltage = ads.computeVolts((int16_t)referenceADC);
 
-    // Convert voltage to displacement
-    float distance =
-        (voltage - sensorMinVoltage) *
-        maxDisplacement /
-        (sensorMaxVoltage - sensorMinVoltage);
+    // Calculate displacement using actual reference voltage
+    float distance = (sensorVoltage / referenceVoltage) * maxDisplacement;
 
-    // Limit displacement
-    if (distance < 0)
-        distance = 0;
+    if(last_distance == 0){
+        last_distance = distance;
+    }
+    distance = distance * 10;
+    distance = distance + last_distance;
+    distance = distance / 11;
+    last_distance = distance;
 
-    if (distance > maxDisplacement)
-        distance = maxDisplacement;
+    Serial.print("Sensor ADC = ");
+    Serial.print(sensorADC, 2);
 
-    Serial.print("ADC Avg = ");
-    Serial.print(adcAverage, 2);
+    Serial.print(" : Sensor Voltage = ");
+    Serial.print(sensorVoltage, 2);
+    Serial.print(" V");
 
-    Serial.print(" : Voltage = ");
-    Serial.print(voltage, 2);
+    Serial.print(" : Reference ADC = ");
+    Serial.print(referenceADC, 2);
+
+    Serial.print(" : Reference Voltage = ");
+    Serial.print(referenceVoltage, 2);
     Serial.print(" V");
 
     Serial.print(" : Displacement = ");
     Serial.print(distance, 2);
     Serial.println(" mm");
+     Serial.print(">var1:");
+    Serial.println(distance, 1);
+
+
 }
