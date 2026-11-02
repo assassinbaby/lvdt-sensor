@@ -1,4 +1,4 @@
-```cpp
+
 #include <Wire.h>
 #include <Adafruit_ADS1X15.h>
 
@@ -100,4 +100,3 @@ void loop()
     Serial.print(">var1:");
     Serial.println(distance, 1);
 }
-```
